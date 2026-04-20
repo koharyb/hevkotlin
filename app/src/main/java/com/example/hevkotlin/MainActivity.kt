@@ -98,9 +98,6 @@ class MainActivity : ComponentActivity() {
             )
 
 
-//            battery level
-//            val batteryLevel = getBatteryLevel(this)
-
 //            each message dedicated function
 
             fun playBatteryMessage10() {
@@ -227,9 +224,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(batteryLevel) {
-                ifBatteryLevel()
-            }
 
 
 
