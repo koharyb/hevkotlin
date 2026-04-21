@@ -1,6 +1,7 @@
 package com.example.hevkotlin
 
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -12,6 +13,7 @@ import android.content.IntentFilter
 import android.media.MediaPlayer
 import android.os.BatteryManager
 import androidx.core.app.NotificationCompat
+
 
 
 
@@ -61,6 +63,7 @@ class BatteryService : Service() {
         wordSounds["powerLevelIs"]?.start()
     }
 
+    @SuppressLint("ForegroundServiceType")
     private fun startForegroundMode() {
         val channelId = "battery_service_channel"
 
@@ -88,6 +91,7 @@ class BatteryService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+
 
 
         startForegroundMode()
