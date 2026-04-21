@@ -21,7 +21,7 @@ import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.compose.runtime.*
-import com.example.hevkotlin.BatteryService
+import androidx.core.content.ContextCompat
 
 
 fun getBatteryLevel(context: Context): Int {
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
 
 //        start Service
         val intent = Intent(this, BatteryService::class.java)
-        startForegroundService(intent)
+
 
 
         enableEdgeToEdge()
@@ -245,7 +245,10 @@ class MainActivity : ComponentActivity() {
                     color = Color.White
                 )
                 Button(onClick = {
-                    ifBatteryLevel()
+                    val intent = Intent(this@MainActivity, BatteryService::class.java)
+                    startForegroundService(intent)
+
+
                 })
                 { Text("h.e.v") }
             }

@@ -10,12 +10,10 @@ import android.os.IBinder
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.media.MediaPlayer
 import android.os.BatteryManager
 import androidx.core.app.NotificationCompat
-
-
-
 
 
 class BatteryService : Service() {
@@ -64,6 +62,7 @@ class BatteryService : Service() {
     }
 
     @SuppressLint("ForegroundServiceType")
+
     private fun startForegroundMode() {
         val channelId = "battery_service_channel"
 
@@ -76,30 +75,28 @@ class BatteryService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
 
-        val notification = NotificationCompat.Builder(this,channelId)
+        val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Battery Service Running")
             .setContentText("Monitoring battery level")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .build()
 
-        startForeground(1, notification)
+        startForeground(1,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
     }
-
-
-
 
 
     override fun onCreate() {
         super.onCreate()
 
-
-
-        startForegroundMode()
-
+        // IMPORTANT: REGISTER RECEIVER HERE
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        registerReceiver(batteryReceiver, filter)
 
 
         //          audio file values and files itself mapped via mapOf
-         numberSounds = mapOf(
+        numberSounds = mapOf(
 
             10 to MediaPlayer.create(this, R.raw.ten),
             20 to MediaPlayer.create(this, R.raw.twenty),
@@ -114,23 +111,17 @@ class BatteryService : Service() {
 
             )
 
-         wordSounds = mapOf(
+        wordSounds = mapOf(
             "powerLevelIs" to MediaPlayer.create(this, R.raw.power_level_is),
             "percent" to MediaPlayer.create(this, R.raw.percent),
             "warning" to MediaPlayer.create(this, R.raw.warning)
         )
 
 
-
     }
 
-        override fun onStartCommand(intent: Intent?, flags:Int, startId: Int): Int {
-
-            // IMPORTANT: REGISTER RECEIVER HERE
-            val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-            registerReceiver(batteryReceiver, filter)
-
-
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundMode()
 
         return START_STICKY
     }
@@ -140,7 +131,7 @@ class BatteryService : Service() {
         super.onDestroy()
 
         unregisterReceiver(batteryReceiver)
-        numberSounds.values.forEach {it.release()}
+        numberSounds.values.forEach { it.release() }
         wordSounds.values.forEach { it.release() }
 
 
