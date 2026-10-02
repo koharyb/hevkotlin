@@ -13,7 +13,9 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.MediaPlayer
 import android.os.BatteryManager
+import androidx.compose.runtime.remember
 import androidx.core.app.NotificationCompat
+import android.os.SystemClock
 
 
 class BatteryService : Service() {
@@ -21,6 +23,40 @@ class BatteryService : Service() {
 
     private lateinit var numberSounds: Map<Int, MediaPlayer>
     private lateinit var wordSounds: Map<String, MediaPlayer>
+
+    private var lastSoundStartedAt = 0L
+
+    private var lastChargerSoundStartedAt = 0L
+
+    private val soundCooldDown = 60_000L
+
+
+    private fun canStartNewSound(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+
+        if (now - lastSoundStartedAt < soundCooldDown) {
+            return false
+        }
+
+        if (now - lastChargerSoundStartedAt < soundCooldDown) {
+            return false
+        }
+
+        return true
+    }
+
+    private fun playChargingSound() {
+        val now = SystemClock.elapsedRealtime()
+
+        if (now - lastChargerSoundStartedAt < soundCooldDown) {
+            return
+        }
+
+        lastChargerSoundStartedAt = now
+
+        wordSounds["charge"]?.start()
+    }
+
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -50,6 +86,14 @@ class BatteryService : Service() {
 
 
     private fun playSound(level: Int) {
+
+        if (!canStartNewSound()) {
+
+            return
+        }
+        lastSoundStartedAt = SystemClock.elapsedRealtime()
+
+
         wordSounds["powerLevelIs"]?.setOnCompletionListener {
             numberSounds[level]?.start()
         }
@@ -78,21 +122,35 @@ class BatteryService : Service() {
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Battery Service Running")
             .setContentText("Monitoring battery level")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .build()
 
         startForeground(1,
-            notification,
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            notification)
     }
+    // charger plugged receiver
+    class ChargerReceiver(
+        val onConnected:() -> Unit
+
+    ) : BroadcastReceiver() {
+        override fun onReceive(context:Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_POWER_CONNECTED) {
+                onConnected()
+            }
+        }
+    }
+
+    //            play a sound of charging function
+    val chargerReceiver =
+        ChargerReceiver {
+            playChargingSound()
+        }
+
 
 
     override fun onCreate() {
         super.onCreate()
 
-        // IMPORTANT: REGISTER RECEIVER HERE
-        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        registerReceiver(batteryReceiver, filter)
 
 
         //          audio file values and files itself mapped via mapOf
@@ -114,8 +172,16 @@ class BatteryService : Service() {
         wordSounds = mapOf(
             "powerLevelIs" to MediaPlayer.create(this, R.raw.power_level_is),
             "percent" to MediaPlayer.create(this, R.raw.percent),
-            "warning" to MediaPlayer.create(this, R.raw.warning)
+            "warning" to MediaPlayer.create(this, R.raw.warning),
+            "charge" to MediaPlayer.create(this, R.raw.hevcharg)
+
         )
+
+        val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        registerReceiver(batteryReceiver, batteryFilter)
+
+        val chargerFilter = IntentFilter(Intent.ACTION_POWER_CONNECTED)
+        registerReceiver(chargerReceiver, chargerFilter)
 
 
     }
@@ -131,6 +197,7 @@ class BatteryService : Service() {
         super.onDestroy()
 
         unregisterReceiver(batteryReceiver)
+        unregisterReceiver(chargerReceiver)
         numberSounds.values.forEach { it.release() }
         wordSounds.values.forEach { it.release() }
 
